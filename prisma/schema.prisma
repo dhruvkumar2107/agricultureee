@@ -1,0 +1,220 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String
+  password      String
+  role          String    @default("farmer") // farmer, fpo, admin
+  phone         String?
+  avatar        String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  farms         Farm[]
+  alerts        Alert[]
+  sessions      Session[]
+}
+
+model Session {
+  id            String    @id @default(uuid())
+  userId        String
+  token         String    @unique
+  expiresAt     DateTime
+  createdAt     DateTime  @default(now())
+  user          User      @relation(fields: [userId], references: [id])
+}
+
+model Farm {
+  id            String    @id @default(uuid())
+  name          String
+  location      String?
+  latitude      Float?
+  longitude     Float?
+  acreage       Float?
+  ownerId       String
+  owner         User      @relation(fields: [ownerId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  fields        Field[]
+  stations      Station[]
+}
+
+model Field {
+  id            String    @id @default(uuid())
+  name          String
+  farmId        String
+  farm          Farm      @relation(fields: [farmId], references: [id])
+  area          Float?
+  cropType      String?
+  latitude      Float?
+  longitude     Float?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  crops         Crop[]
+  aiAnalyses    AIAnalysis[]
+}
+
+model Station {
+  id            String    @id @default(uuid())
+  stationId     String    @unique // AGR-001
+  name          String
+  farmId        String?
+  farm          Farm?     @relation(fields: [farmId], references: [id])
+  firmware      String    @default("1.0.0")
+  status        String    @default("offline") // online, offline, warning, critical
+  battery       Float     @default(100)
+  solarStatus   String    @default("charging") // charging, discharging, full, error
+  lastHeartbeat DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sensors       Sensor[]
+  readings      SensorReading[]
+  aiAnalyses    AIAnalysis[]
+  alerts        Alert[]
+  heartbeats    DeviceHeartbeat[]
+  voiceAlerts   VoiceAlert[]
+}
+
+model Sensor {
+  id            String    @id @default(uuid())
+  stationId     String
+  station       Station   @relation(fields: [stationId], references: [id])
+  type          String    // npk, moisture, ph, temperature, humidity, camera, etc.
+  name          String
+  status        String    @default("active")
+  unit          String?
+  lastReading   Float?
+  lastUpdated   DateTime?
+  createdAt     DateTime  @default(now())
+}
+
+model SensorReading {
+  id            String    @id @default(uuid())
+  stationId     String
+  station       Station   @relation(fields: [stationId], references: [id])
+  timestamp     DateTime  @default(now())
+  nitrogen      Float?
+  phosphorus    Float?
+  potassium     Float?
+  ph            Float?
+  moisture1     Float?
+  moisture2     Float?
+  soilTemp      Float?
+  airTemp       Float?
+  humidity      Float?
+  rainfall      Float?
+  light         Float?
+  wind          Float?
+  raw           String?   // JSON string for any extra data
+}
+
+model Crop {
+  id            String    @id @default(uuid())
+  name          String
+  fieldId       String
+  field         Field     @relation(fields: [fieldId], references: [id])
+  variety       String?
+  stage         String    @default("growing") // seedling, vegetative, flowering, fruiting, harvest
+  plantedDate   DateTime?
+  harvestDate   DateTime?
+  status        String    @default("healthy")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  aiAnalyses    AIAnalysis[]
+}
+
+model AIAnalysis {
+  id            String    @id @default(uuid())
+  stationId     String
+  station       Station   @relation(fields: [stationId], references: [id])
+  fieldId       String?
+  field         Field?    @relation(fields: [fieldId], references: [id])
+  cropId        String?
+  crop          Crop?     @relation(fields: [cropId], references: [id])
+  timestamp     DateTime  @default(now())
+  cropHealth    Float     @default(0)
+  diseaseRisk   Float     @default(0)
+  ndre          Float     @default(0)
+  chlorophyllStress Float @default(0)
+  waterStress   Float     @default(0)
+  nutrientStress Float    @default(0)
+  diseaseProbability Float @default(0)
+  stressLevel   String    @default("low")
+  confidence    Float     @default(0)
+  imageUrl      String?
+  result        String?   // JSON string for full result
+}
+
+model Alert {
+  id            String    @id @default(uuid())
+  stationId     String?
+  station       Station?  @relation(fields: [stationId], references: [id])
+  farmId        String?
+  userId        String?
+  user          User?     @relation(fields: [userId], references: [id])
+  type          String    // disease_risk, soil_moisture_low, nutrient_imbalance, high_temperature, high_humidity, station_offline, low_battery, sensor_failure
+  severity      String    @default("info") // info, warning, critical
+  title         String
+  message       String
+  description   String?
+  action        String?
+  confidence    Float?
+  zone          String?
+  status        String    @default("new") // new, acknowledged, resolved
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Recommendation {
+  id            String    @id @default(uuid())
+  alertId       String?
+  analysisId    String?
+  title         String
+  description   String
+  priority      String    @default("medium")
+  category      String?
+  createdAt     DateTime  @default(now())
+}
+
+model DeviceHeartbeat {
+  id            String    @id @default(uuid())
+  stationId     String
+  station       Station   @relation(fields: [stationId], references: [id])
+  timestamp     DateTime  @default(now())
+  battery       Float?
+  solarStatus   String?
+  status        String?
+  sensorsOk     Boolean   @default(true)
+  uptime        Int?
+  storageUsed   Float?
+  pendingSync   Int       @default(0)
+}
+
+model VoiceAlert {
+  id            String    @id @default(uuid())
+  stationId     String
+  station       Station   @relation(fields: [stationId], references: [id])
+  alertId       String?
+  language      String    // hindi, kannada, telugu
+  message       String
+  delivered     Boolean   @default(false)
+  deliveredAt   DateTime?
+  createdAt     DateTime  @default(now())
+}
+
+model SyncQueue {
+  id            String    @id @default(uuid())
+  stationId     String
+  dataType      String    // reading, analysis, alert, heartbeat
+  payload       String    // JSON
+  synced        Boolean   @default(false)
+  retryCount    Int       @default(0)
+  createdAt     DateTime  @default(now())
+  syncedAt      DateTime?
+}

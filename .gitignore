@@ -36,6 +36,16 @@ yarn-error.log*
 # vercel
 .vercel
 
+# database
+*.db
+*.db-journal
+
+# agent dirs
+.agents/
+.claude/
+.cursor/
+.devin/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
