@@ -57,41 +57,49 @@ export async function POST() {
       stations.push(s);
 
       const sensorTypes = ['Nitrogen', 'Phosphorus', 'Potassium', 'pH', 'Moisture 1', 'Moisture 2', 'Temperature', 'Humidity'];
-      for (const name of sensorTypes) {
-        await prisma.sensor.create({
-          data: { stationId: s.id, type: name.toLowerCase().replace(' ', '_'), name, unit: name === 'pH' ? 'pH' : name.includes('Moisture') ? '%' : name === 'Temperature' ? '°C' : name === 'Humidity' ? '%' : 'mg/kg' },
-        });
-      }
+      await prisma.sensor.createMany({
+        data: sensorTypes.map(name => ({
+          stationId: s.id,
+          type: name.toLowerCase().replace(' ', '_'),
+          name,
+          unit: name === 'pH' ? 'pH' : name.includes('Moisture') ? '%' : name === 'Temperature' ? '°C' : name === 'Humidity' ? '%' : 'mg/kg',
+        })),
+      });
     }
 
+    const allReadings = [];
+    const now = Date.now();
     for (const station of stations) {
-      const now = new Date();
       for (let h = 0; h < 24; h++) {
-        const ts = new Date(now.getTime() - h * 60 * 60 * 1000);
-        await prisma.sensorReading.create({
-          data: {
-            stationId: station.id,
-            timestamp: ts,
-            nitrogen: 50 + Math.random() * 30,
-            phosphorus: 25 + Math.random() * 20,
-            potassium: 80 + Math.random() * 60,
-            ph: 6 + Math.random() * 1.5,
-            moisture1: 30 + Math.random() * 30,
-            moisture2: 25 + Math.random() * 25,
-            soilTemp: 20 + Math.random() * 10,
-            airTemp: 25 + Math.random() * 12,
-            humidity: 50 + Math.random() * 30,
-            rainfall: Math.random() > 0.8 ? Math.random() * 10 : 0,
-            light: 500 + Math.random() * 500,
-            wind: 5 + Math.random() * 15,
-          },
+        allReadings.push({
+          stationId: station.id,
+          timestamp: new Date(now - h * 60 * 60 * 1000),
+          nitrogen: 50 + Math.random() * 30,
+          phosphorus: 25 + Math.random() * 20,
+          potassium: 80 + Math.random() * 60,
+          ph: 6 + Math.random() * 1.5,
+          moisture1: 30 + Math.random() * 30,
+          moisture2: 25 + Math.random() * 25,
+          soilTemp: 20 + Math.random() * 10,
+          airTemp: 25 + Math.random() * 12,
+          humidity: 50 + Math.random() * 30,
+          rainfall: Math.random() > 0.8 ? Math.random() * 10 : 0,
+          light: 500 + Math.random() * 500,
+          wind: 5 + Math.random() * 15,
         });
       }
     }
+    for (let i = 0; i < allReadings.length; i += 50) {
+      await prisma.sensorReading.createMany({ data: allReadings.slice(i, i + 50) });
+    }
 
-    await prisma.alert.create({ data: { stationId: stations[2].id, type: 'temperature', severity: 'warning', title: 'High Temperature Detected', message: 'Soil temperature exceeding optimal range for cotton.', status: 'new' } });
-    await prisma.alert.create({ data: { stationId: stations[3].id, type: 'offline', severity: 'critical', title: 'Station Offline', message: 'AGR-004 has not sent data in 2 hours.', status: 'new' } });
-    await prisma.alert.create({ data: { stationId: stations[0].id, type: 'moisture', severity: 'info', title: 'Moisture Normal', message: 'Soil moisture levels are within optimal range.', status: 'resolved' } });
+    await prisma.alert.createMany({
+      data: [
+        { stationId: stations[2].id, type: 'temperature', severity: 'warning', title: 'High Temperature Detected', message: 'Soil temperature exceeding optimal range for cotton.', status: 'new' },
+        { stationId: stations[3].id, type: 'offline', severity: 'critical', title: 'Station Offline', message: 'AGR-004 has not sent data in 2 hours.', status: 'new' },
+        { stationId: stations[0].id, type: 'moisture', severity: 'info', title: 'Moisture Normal', message: 'Soil moisture levels are within optimal range.', status: 'resolved' },
+      ],
+    });
 
     return NextResponse.json({ success: true, message: 'Database seeded successfully', users: 3, farms: 3, stations: 4 });
   } catch (error) {
