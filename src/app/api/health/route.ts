@@ -3,30 +3,34 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
-    const [onlineCount, offlineCount] = await Promise.all([
-      prisma.station.count({ where: { status: 'online' } }),
-      prisma.station.count({ where: { status: { not: 'online' } } }),
-    ]);
+    const url = process.env.DATABASE_URL || '';
+    const hasUrl = url.length > 0;
+    const stripped = url.replace(/^["']|["']$/g, '');
+    const hasQuotes = url !== stripped;
 
-    await prisma.$queryRaw`SELECT 1`;
+    const [userCount, stationCount, readingCount] = await Promise.all([
+      prisma.user.count(),
+      prisma.station.count(),
+      prisma.sensorReading.count(),
+    ]);
 
     return NextResponse.json({
       status: 'ok',
-      timestamp: new Date().toISOString(),
       db: 'connected',
-      stations: {
-        online: onlineCount,
-        offline: offlineCount,
-      },
+      hasDatabaseUrl: hasUrl,
+      hasQuotes,
+      userCount,
+      stationCount,
+      readingCount,
     });
   } catch (error) {
     console.error('Health check error:', error);
     return NextResponse.json(
       {
         status: 'error',
-        timestamp: new Date().toISOString(),
         db: 'disconnected',
-        stations: { online: 0, offline: 0 },
+        hasDatabaseUrl: !!process.env.DATABASE_URL,
+        error: (error as Error).message,
       },
       { status: 503 }
     );
