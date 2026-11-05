@@ -8,6 +8,30 @@ export async function GET(request: NextRequest) {
 
     const where = farmId ? { farmId } : {};
 
+    // Ensure the Firebase ESP32 device station exists
+    try {
+      const espStation = await prisma.station.findUnique({
+        where: { stationId: 'esp32_01' },
+      });
+      if (!espStation) {
+        const firstFarm = await prisma.farm.findFirst();
+        await prisma.station.create({
+          data: {
+            stationId: 'esp32_01',
+            name: 'ESP32 Cultivation Node (Firebase RTDB)',
+            firmware: 'ESP32-RTDB-1.0',
+            status: 'online',
+            battery: 100,
+            solarStatus: 'charging',
+            farmId: firstFarm ? firstFarm.id : null,
+            lastHeartbeat: new Date(),
+          },
+        });
+      }
+    } catch (e) {
+      console.warn('Could not auto-provision esp32_01 station:', e);
+    }
+
     const stations = await prisma.station.findMany({
       where,
       include: {

@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/auth-context";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import StatusBadge from "@/components/StatusBadge";
 import SensorGauge from "@/components/SensorGauge";
+import FirebaseLiveSensorCard from "@/components/FirebaseLiveSensorCard";
 import { LineChartComponent } from "@/components/Charts";
 import TimeRangeSelector from "@/components/TimeRangeSelector";
 import { Radio, ArrowLeft, Battery, Wifi, WifiOff, Thermometer, Droplets, Leaf } from "lucide-react";
@@ -81,6 +82,10 @@ export default function StationDetailPage() {
           {station.farm && <span>Farm: {station.farm.name}</span>}
         </div>
       </div>
+
+      {station.stationId === "esp32_01" && (
+        <FirebaseLiveSensorCard deviceId="esp32_01" showLinkToSoil={false} />
+      )}
 
       <div>
         <h3 className="text-lg font-semibold text-stone-800 mb-4">Current Readings</h3>

@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/auth-context";
 import StatCard from "@/components/StatCard";
 import StatusBadge from "@/components/StatusBadge";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import FirebaseLiveSensorCard from "@/components/FirebaseLiveSensorCard";
 import { cn, timeAgo } from "@/lib/utils";
 
 export default function DashboardPage() {
@@ -54,6 +55,9 @@ function DashboardContent() {
 
   return (
     <div className="space-y-6">
+      {/* Live ESP32 Sensor Feed from Firebase RTDB */}
+      <FirebaseLiveSensorCard deviceId="esp32_01" />
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Total Stations" value={stats?.totalStations || 0} icon={Radio} color="green" />
         <StatCard title="Online" value={stats?.onlineStations || 0} icon={Wifi} color="green" trend="up" trendValue="Active" />
